@@ -1,0 +1,30 @@
+global:
+  scrape_interval: 15s       # how often Prometheus scrapes metrics
+  evaluation_interval: 15s   # how often alert rules are evaluated
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - "alertmanager:9093"   # container name on the shared docker network
+
+rule_files:
+  - "/etc/prometheus/alert.rules.yml"
+
+scrape_configs:
+  # Prometheus scraping itself
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Host-level metrics (CPU, memory, disk) via node-exporter
+  - job_name: "node-exporter"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+
+  # Your app — scraped by container name since it's on the same
+  # "observability-net" docker network as Prometheus.
+  - job_name: "app"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["app:8000"]

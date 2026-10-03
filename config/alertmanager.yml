@@ -1,0 +1,27 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: "default"
+  group_by: ["alertname"]
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 1h
+
+receivers:
+  - name: "default"
+    # Swap this for a real webhook once you're ready — e.g. a Slack
+    # incoming webhook URL. Leaving it as webhook_configs with a dummy
+    # target keeps Alertmanager valid without needing real credentials yet.
+    webhook_configs:
+      - url: "http://localhost:5001/"
+        send_resolved: true
+
+  # Example Slack receiver — uncomment and fill in once you have a webhook:
+  # - name: "slack"
+  #   slack_configs:
+  #     - api_url: "https://hooks.slack.com/services/XXX/YYY/ZZZ"
+  #       channel: "#alerts"
+  #       send_resolved: true
+  #       title: "{{ .CommonAnnotations.summary }}"
+  #       text: "{{ .CommonAnnotations.description }}"
