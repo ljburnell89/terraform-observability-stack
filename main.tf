@@ -69,7 +69,8 @@ resource "docker_container" "prometheus" {
   command = [
     "--config.file=/etc/prometheus/prometheus.yml",
     "--storage.tsdb.path=/prometheus",
-    "--web.enable-lifecycle" # lets us reload config without recreating the container
+    "--web.enable-lifecycle",   # lets us reload config without recreating the container
+    "--web.cors.origin=.*"      # allows the control panel (a different origin/port) to call Prometheus's API directly from the browser
   ]
 
   depends_on = [docker_container.app]
@@ -154,7 +155,14 @@ resource "docker_container" "grafana" {
   env = [
     "GF_SECURITY_ADMIN_USER=${var.grafana_admin_user}",
     "GF_SECURITY_ADMIN_PASSWORD=${var.grafana_admin_password}",
-    "GF_INSTALL_PLUGINS="
+    "GF_INSTALL_PLUGINS=",
+    # Lets the control panel embed a live Grafana panel in an <iframe>
+    # (Grafana blocks iframe embedding by default via X-Frame-Options).
+    "GF_SECURITY_ALLOW_EMBEDDING=true",
+    # Lets the embedded panel render without prompting for a Grafana login —
+    # read-only Viewer access only, scoped to this local demo.
+    "GF_AUTH_ANONYMOUS_ENABLED=true",
+    "GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer"
   ]
 
   depends_on = [docker_container.prometheus]
@@ -165,14 +173,14 @@ resource "docker_container" "grafana" {
 # deliberately-breakable app Prometheus scrapes and Alertmanager fires on.
 # ---------------------------------------------------------------------------
 resource "docker_image" "app" {
-  name = "observability-demo-app:latest"
-  build {
-    context = "${abspath(path.module)}/app"
-  }
+  # Built manually via `docker build -t observability-demo-app:latest ./app`
+  # (the provider's own build step is flaky on Windows — see README).
+  name         = "observability-demo-app:latest"
+  keep_locally = true
 }
 
 resource "docker_container" "app" {
-  image = docker_image.app.image_id
+  image = "observability-demo-app:latest"
   name  = "app" # must match the target in config/prometheus.yml
 
   networks_advanced {
